@@ -131,7 +131,11 @@ async function main() {
           });
         }
         else {
-          process.stderr.write(`Tool call to unknown tool: ${toolCall.function.name}`);
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `Unknown tool call: ${toolCall.function.name}`
+          });
         }
       }
     }
