@@ -121,9 +121,9 @@ async function main() {
           const functionArguments = JSON.parse(toolCall.function.arguments);
           const command = functionArguments.command;
           console.log(`Executing command: ${command}`);
-          const { stdout, stderr } = await $`${command}`.quiet().nothrow();
-          const output = await stdout.text();
-          const errorOutput = await stderr.text();
+          const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // bun's $ function allows executing shell commands
+          const output = await stdout.toString();
+          const errorOutput = await stderr.toString();
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
