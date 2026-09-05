@@ -41,6 +41,27 @@ async function main() {
               "required": ["file_path"]
             }
           }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "Write",
+            "description": "Write content to a file",
+            "parameters": {
+              "type": "object",
+              "required": ["file_path", "content"],
+              "properties": {
+                "file_path": {
+                  "type": "string",
+                  "description": "The path of the file to write to"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "The content to write to the file"
+                }
+              }
+            }
+          }
         }
       ]
     });
@@ -64,7 +85,21 @@ async function main() {
             tool_call_id: toolCall.id,
             content: fileContent
           });
-        } else {
+        }
+        else if (toolCall.function.name === "Write") {
+          const functionArguments = JSON.parse(toolCall.function.arguments);
+          const filePath = functionArguments.file_path;
+          const content = functionArguments.content;
+          // This API automatically creates the file if it does not exist, overwrites existing contents,
+          // and accepts both absolute and relative paths
+          await Bun.write(filePath, content);
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `Content written to ${filePath}`
+          });
+        }
+        else {
           process.stderr.write(`Tool call to unknown tool: ${toolCall.function.name}`);
         }
       }
