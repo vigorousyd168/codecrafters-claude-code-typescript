@@ -121,7 +121,7 @@ async function main() {
           const functionArguments = JSON.parse(toolCall.function.arguments);
           const command = functionArguments.command;
           console.log(`Executing command: ${command}`);
-          const { stdout, stderr } = await $`${command}`;
+          const { stdout, stderr } = await $`${command}`.quiet().nothrow();
           const output = await stdout.text();
           const errorOutput = await stderr.text();
           messages.push({
