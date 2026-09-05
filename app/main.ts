@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { $ } from "bun";
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -119,7 +120,7 @@ async function main() {
         else if (toolCall.function.name === "Bash") {
           const functionArguments = JSON.parse(toolCall.function.arguments);
           const command = functionArguments.command;
-          const { stdout, stderr } = await Bun.spawn([command], { stdout: "pipe", stderr: "pipe" });
+          const { stdout, stderr } = await $`${command}`;
           const output = await stdout.text();
           const errorOutput = await stderr.text();
           messages.push({
