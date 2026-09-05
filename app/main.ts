@@ -48,8 +48,32 @@ async function main() {
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   console.error("Logs from your program will appear here!");
 
-  // TODO: Uncomment the lines below to pass the first stage
-  console.log(response.choices[0].message.content);
+  // function call or print message content
+  if (response.choices[0].message.tool_calls && response.choices[0].message.tool_calls.length > 0) {
+    const toolCall = response.choices[0].message.tool_calls[0];
+    if (toolCall.function.name === "Read") {
+      const filePath = toolCall.function.arguments.file_path;
+      console.log(`Tool call to Read file at path: ${filePath}`);
+      const fileContent = readFile(filePath);
+      console.log(`File content:\n${fileContent}`);
+    } else {
+      console.log(`Tool call to unknown tool: ${toolCall.function.name}`);
+    }
+  }
+  else {
+    console.log(response.choices[0].message.content);
+  }
+}
+
+function readFile(filePath: string): string {
+  const fs = require("fs");
+  try {
+    const data = fs.readFileSync(filePath, "utf8");
+    return data;
+  } catch (err) {
+    console.error(`Error reading file from path ${filePath}:`, err);
+    return "";
+  }
 }
 
 main();
