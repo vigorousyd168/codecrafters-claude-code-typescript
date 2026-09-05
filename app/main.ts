@@ -52,27 +52,16 @@ async function main() {
   if (response.choices[0].message.tool_calls && response.choices[0].message.tool_calls.length > 0) {
     const toolCall = response.choices[0].message.tool_calls[0];
     if (toolCall.function.name === "Read") {
-      const filePath = toolCall.function.arguments.file_path;
-      console.log(`Tool call to Read file at path: ${filePath}`);
-      const fileContent = readFile(filePath);
-      console.log(`File content:\n${fileContent}`);
+      const functionArguments = JSON.parse(toolCall.function.arguments);
+      const filePath = functionArguments.file_path;
+      const fileContent = await Bun.file(filePath).text();
+      process.stdout.write(fileContent);
     } else {
-      console.log(`Tool call to unknown tool: ${toolCall.function.name}`);
+      console.error(`Tool call to unknown tool: ${toolCall.function.name}`);
     }
   }
   else {
     console.log(response.choices[0].message.content);
-  }
-}
-
-function readFile(filePath: string): string {
-  const fs = require("fs");
-  try {
-    const data = fs.readFileSync(filePath, "utf8");
-    return data;
-  } catch (err) {
-    console.error(`Error reading file from path ${filePath}:`, err);
-    return "";
   }
 }
 
