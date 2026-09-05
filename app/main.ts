@@ -1,5 +1,6 @@
 import OpenAI from "openai";
-import { $ } from "bun";
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -21,6 +22,7 @@ async function main() {
 
   const messages = [{ role: "user", content: prompt }];
   let exit = false;
+  const execAsync = promisify(exec);
 
   while (!exit) {
     const response = await client.chat.completions.create({
@@ -121,11 +123,10 @@ async function main() {
           const functionArguments = JSON.parse(toolCall.function.arguments);
           const command = functionArguments.command;
           console.log(`Executing command: ${command}`);
-          const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // bun's $ function allows executing shell commands
+          // const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // bun's $ function appeared to be limited
+          const { stdout, stderr } = await execAsync(command);
           const output = await stdout.toString();
           const errorOutput = await stderr.toString();
-          console.log(`Command output: ${output}`);
-          console.log(`Command error output: ${errorOutput}`);
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
