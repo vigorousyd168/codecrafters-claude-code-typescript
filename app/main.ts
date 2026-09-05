@@ -16,8 +16,12 @@ async function main() {
   const client = new OpenAI({
     apiKey: apiKey,
     baseURL: baseURL,
-    tools: [
-      {
+  });
+
+  const response = await client.chat.completions.create({
+    model: "anthropic/claude-haiku-4.5",
+    messages: [{ role: "user", content: prompt }],
+    tools: [{
         "type": "function",
         "function": {
           "name": "Read",
@@ -35,11 +39,6 @@ async function main() {
         }
       }
     ]
-  });
-
-  const response = await client.chat.completions.create({
-    model: "anthropic/claude-haiku-4.5",
-    messages: [{ role: "user", content: prompt }],
   });
 
   if (!response.choices || response.choices.length === 0) {
