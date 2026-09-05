@@ -20,7 +20,7 @@ async function main() {
     baseURL: baseURL,
   });
 
-  const messages = [{ role: "user", content: prompt }];
+  const messages = [{ role: "user", content: prompt }]; // append only; initially only one message from the user
   let exit = false;
   const execAsync = promisify(exec);
 
@@ -28,6 +28,7 @@ async function main() {
     const response = await client.chat.completions.create({
       model: "anthropic/claude-haiku-4.5",
       messages: messages,
+      // advertising tools: Read, Write, Bash
       tools: [{
           "type": "function",
           "function": {
@@ -123,7 +124,7 @@ async function main() {
           const functionArguments = JSON.parse(toolCall.function.arguments);
           const command = functionArguments.command;
           console.log(`Executing command: ${command}`);
-          // const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // bun's $ function appeared to be limited
+          // const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // support of bun's $ function in my env appeared to be limited
           const { stdout, stderr } = await execAsync(command);
           const output = await stdout.toString();
           const errorOutput = await stderr.toString();
