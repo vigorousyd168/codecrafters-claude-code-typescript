@@ -124,6 +124,8 @@ async function main() {
           const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // bun's $ function allows executing shell commands
           const output = await stdout.toString();
           const errorOutput = await stderr.toString();
+          console.log(`Command output: ${output}`);
+          console.log(`Command error output: ${errorOutput}`);
           messages.push({
             role: "tool",
             tool_call_id: toolCall.id,
