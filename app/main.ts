@@ -62,6 +62,23 @@ async function main() {
               }
             }
           }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "Bash",
+            "description": "Execute a shell command",
+            "parameters": {
+              "type": "object",
+              "required": ["command"],
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "The command to execute"
+                }
+              }
+            }
+          }
         }
       ]
     });
@@ -97,6 +114,18 @@ async function main() {
             role: "tool",
             tool_call_id: toolCall.id,
             content: `Content written to ${filePath}`
+          });
+        }
+        else if (toolCall.function.name === "Bash") {
+          const functionArguments = JSON.parse(toolCall.function.arguments);
+          const command = functionArguments.command;
+          const { stdout, stderr } = await Bun.spawn([command], { stdout: "pipe", stderr: "pipe" });
+          const output = await stdout.text();
+          const errorOutput = await stderr.text();
+          messages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: `Command executed: ${command}\nOutput:\n${output}\nError Output:\n${errorOutput}`
           });
         }
         else {
