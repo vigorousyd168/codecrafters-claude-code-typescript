@@ -120,6 +120,7 @@ async function main() {
         else if (toolCall.function.name === "Bash") {
           const functionArguments = JSON.parse(toolCall.function.arguments);
           const command = functionArguments.command;
+          console.log(`Executing command: ${command}`);
           const { stdout, stderr } = await $`${command}`;
           const output = await stdout.text();
           const errorOutput = await stderr.text();
