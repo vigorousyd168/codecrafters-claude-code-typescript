@@ -8,10 +8,9 @@ function buildSystemPrompt(): string {
     return "";
   }
   const skillList = skills
-    .map(skill => `Name: ${skill.name}\nDescription: ${skill.description}\nFile: ${skill.filePath}\n\n`)
+    .map(skill => `- ${skill.name}: ${skill.description}\n`)
     .join("");
-  return "You have access to the following skills. When a skill is relevant to the task, " +
-    "read its file with the Read tool and follow its instructions.\n\n" + skillList;
+  return "You have access to the following skills:\n\n" + skillList;
 }
 
 async function main() {
