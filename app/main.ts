@@ -26,10 +26,10 @@ function buildUserPrompt(prompt: string, skills: SkillMetadata[]): string {
 
 function formatString(template: string, ...args: string[]): string {
   return template.replace(/\$(\d+)/g, (match, indexStr) => {
-    const index = parseInt(indexStr, 10) - 1; // Convert $1 to 0-based index
+    const index = parseInt(indexStr, 10);
     return index >= 0 && index < args.length ? args[index] : match;
   }).replace(/\$ARGUMENTS\[(\d+)\]/g, (match, indexStr) => {
-    const index = parseInt(indexStr, 10) - 1; // Convert $1 to 0-based index
+    const index = parseInt(indexStr, 10);
     return index >= 0 && index < args.length ? args[index] : match;
   }).replace(/\$ARGUMENTS/g, () => {
     return args.join(" ");
