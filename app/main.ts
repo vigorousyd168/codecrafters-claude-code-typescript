@@ -1,9 +1,8 @@
 import OpenAI from "openai";
-import { scanSkills } from "./skills";
+import { scanSkills, SkillMetadata } from "./skills";
 import { toolDefinitions, executeTool } from "./tools";
 
-function buildSystemPrompt(): string {
-  const skills = scanSkills(".claude/skills");
+function buildSystemPrompt(skills: SkillMetadata[]): string {
   if (skills.length === 0) {
     return "";
   }
@@ -11,6 +10,18 @@ function buildSystemPrompt(): string {
     .map(skill => `- ${skill.name}: ${skill.description}\n`)
     .join("");
   return "You have access to the following skills:\n\n" + skillList;
+}
+
+function buildUserPrompt(prompt: string, skills: SkillMetadata[]): string {
+  if (prompt.startsWith("/")) {
+    const skillName = prompt.slice(1);
+    const skill = skills.find(s => s.name === skillName);
+    if (!skill) {
+      throw new Error(`Skill not found: ${skillName}`);
+    }
+    return skill.body;
+  }
+  return prompt;
 }
 
 async function main() {
@@ -31,9 +42,11 @@ async function main() {
     baseURL: baseURL,
   });
 
+  const skills = scanSkills(".claude/skills");
+
   const messages = [
-    { role: "system", content: buildSystemPrompt() },
-    { role: "user", content: prompt }
+    { role: "system", content: buildSystemPrompt(skills) },
+    { role: "user", content: buildUserPrompt(prompt, skills) }
   ];
 
   while (true) {

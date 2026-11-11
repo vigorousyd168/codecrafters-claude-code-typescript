@@ -5,6 +5,7 @@ export interface SkillMetadata {
   name: string;
   description: string;
   filePath: string;
+  body: string;
 }
 
 /**
@@ -101,6 +102,7 @@ export function scanSkills(dirPath: string): SkillMetadata[] {
           name: metadata.name || path.basename(dirPath),
           description: metadata.description || '',
           filePath: fullPath,
+          body: content.split('---')[2] || '',
         });
       } catch (error) {
         console.error(`Failed to read or parse ${fullPath}:`, error);
