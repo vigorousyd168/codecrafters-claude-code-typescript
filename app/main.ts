@@ -1,6 +1,45 @@
 import OpenAI from "openai";
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { readdir, readFile } from 'node:fs/promises';
+import * as fs from 'node:fs';
+import { join } from 'node:path';
+import matter from 'gray-matter';
+
+interface SkillInfo {
+  name: string;
+  description: string;
+}
+
+function findSkills(rootDirectory: string): SkillInfo[] {
+  const skills: SkillInfo[] = [];
+
+  if (!fs.existsSync(rootDirectory)) {
+    return skills;
+  }
+
+  function scan(currentDir: string) {
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = join(currentDir, entry.name);
+
+      if (entry.isDirectory()) {
+        scan(fullPath);
+      } else if (entry.isFile() && entry.name === 'SKILL.md') {
+        const skillContent = fs.readFileSync(fullPath, 'utf-8');
+        const { data } = matter(skillContent);
+        skills.push({
+          name: data.name || entry.name,
+          description: data.description || '',
+        });
+      }
+    }
+  }
+
+  scan(rootDirectory);
+  return skills;
+}
 
 async function main() {
   const [, , flag, prompt] = process.argv;
@@ -20,7 +59,10 @@ async function main() {
     baseURL: baseURL,
   });
 
-  const messages = [{ role: "user", content: prompt }]; // append only; initially only one message from the user
+  const messages = [
+    { role: "system", content: findSkills(".claude/skills").map((skill) => `Name: ${skill.name}\nDescription: ${skill.description}\n\n`).join("") },
+    { role: "user", content: prompt }
+  ];
   let exit = false;
   const execAsync = promisify(exec);
 
