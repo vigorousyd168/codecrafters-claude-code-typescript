@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { scanSkills, SkillMetadata } from "./skills";
+import { scanSkills, type SkillMetadata } from "./skills";
 import { toolDefinitions, executeTool } from "./tools";
 
 function buildSystemPrompt(skills: SkillMetadata[]): string {
@@ -14,25 +14,36 @@ function buildSystemPrompt(skills: SkillMetadata[]): string {
 
 function buildUserPrompt(prompt: string, skills: SkillMetadata[]): string {
   if (prompt.startsWith("/")) {
-    const skillName = prompt.split(" ")[0].slice(1);
-    const skill = skills.find(s => s.name === skillName);
-    if (!skill) {
-      throw new Error(`Skill not found: ${skillName}`);
+    const [command, ...args] = splitArgs(prompt);
+    const skill = skills.find(s => s.name === command.slice(1));
+    // No matching skill (e.g. "/etc/hosts ..."): fall through and send the prompt as-is
+    if (skill) {
+      return formatString(skill.body, ...args);
     }
-    return formatString(skill.body, ...prompt.split(" ").slice(1));
   }
   return prompt;
 }
 
+/**
+ * Splits on whitespace, keeping "double" or 'single' quoted text together as one argument (quotes removed).
+ */
+function splitArgs(input: string): string[] {
+  return [...input.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)]
+    .map(m => m[1] ?? m[2] ?? m[3]);
+}
+
+/**
+ * Substitutes $ARGUMENTS[N], $N (0-based) and $ARGUMENTS in a single pass,
+ * so placeholders inside substituted arguments are left untouched.
+ * Out-of-range indexes are left as-is.
+ */
 function formatString(template: string, ...args: string[]): string {
-  return template.replace(/\$(\d+)/g, (match, indexStr) => {
-    const index = parseInt(indexStr, 10);
-    return index >= 0 && index < args.length ? args[index] : match;
-  }).replace(/\$ARGUMENTS\[(\d+)\]/g, (match, indexStr) => {
-    const index = parseInt(indexStr, 10);
-    return index >= 0 && index < args.length ? args[index] : match;
-  }).replace(/\$ARGUMENTS/g, () => {
-    return args.join(" ");
+  return template.replace(/\$ARGUMENTS\[(\d+)\]|\$(\d+)|\$ARGUMENTS/g, (match, bracketIndex, shortIndex) => {
+    const index = bracketIndex ?? shortIndex;
+    if (index === undefined) {
+      return args.join(" ");
+    }
+    return args[Number(index)] ?? match;
   });
 }
 

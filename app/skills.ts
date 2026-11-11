@@ -11,11 +11,12 @@ export interface SkillMetadata {
 /**
  * Parses YAML front matter using zero external dependencies.
  * Supports single-line strings, quoted values, and basic multi-line blocks (| or >).
+ * Returns the parsed key/value pairs and the remaining content after the front matter.
  */
-function parseFrontMatter(content: string): Record<string, string> {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+function parseFrontMatter(content: string): { metadata: Record<string, string>; body: string } {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (!match) {
-    return {};
+    return { metadata: {}, body: content };
   }
 
   const result: Record<string, string> = {};
@@ -73,7 +74,7 @@ function parseFrontMatter(content: string): Record<string, string> {
   }
 
   flushBlock();
-  return result;
+  return { metadata: result, body: content.slice(match[0].length) };
 }
 
 /**
@@ -96,13 +97,13 @@ export function scanSkills(dirPath: string): SkillMetadata[] {
     } else if (entry.isFile() && entry.name.toLowerCase() === 'skill.md') {
       try {
         const content = fs.readFileSync(fullPath, 'utf8');
-        const metadata = parseFrontMatter(content);
+        const { metadata, body } = parseFrontMatter(content);
 
         results.push({
           name: metadata.name || path.basename(dirPath),
           description: metadata.description || '',
           filePath: fullPath,
-          body: content.split('---')[2] || '',
+          body,
         });
       } catch (error) {
         console.error(`Failed to read or parse ${fullPath}:`, error);
