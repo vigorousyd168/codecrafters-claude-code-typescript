@@ -1,44 +1,61 @@
 import OpenAI from "openai";
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { readdir, readFile } from 'node:fs/promises';
 import * as fs from 'node:fs';
 import { join } from 'node:path';
-import matter from 'gray-matter';
+import * as path from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
-interface SkillInfo {
-  name: string;
-  description: string;
+interface SkillMetadata {
+  name?: string;
+  description?: string;
+  filePath: string;
 }
 
-function findSkills(rootDirectory: string): SkillInfo[] {
-  const skills: SkillInfo[] = [];
-
-  if (!fs.existsSync(rootDirectory)) {
-    return skills;
+/**
+ * Extracts and parses YAML front matter from a Markdown string.
+ */
+function extractFrontMatter(content: string): Record<string, unknown> {
+  // Match content between opening and closing '---' delimiters
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) {
+    return {};
   }
 
-  function scan(currentDir: string) {
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+  return parseYaml(match[1]) ?? {};
+}
 
-    for (const entry of entries) {
-      const fullPath = join(currentDir, entry.name);
+function scanSkills(dirPath: string): SkillMetadata[] {
+  const results: SkillMetadata[] = [];
 
-      if (entry.isDirectory()) {
-        scan(fullPath);
-      } else if (entry.isFile() && entry.name === 'SKILL.md') {
-        const skillContent = fs.readFileSync(fullPath, 'utf-8');
-        const { data } = matter(skillContent);
-        skills.push({
-          name: data.name || entry.name,
-          description: data.description || '',
+  if (!fs.existsSync(dirPath)) {
+    return results;
+  }
+
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      results.push(...scanSkills(fullPath));
+    } else if (entry.isFile() && entry.name.toLowerCase() === 'skill.md') {
+      try {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const data = extractFrontMatter(content);
+
+        results.push({
+          name: typeof data.name === 'string' ? data.name : path.basename(dirPath),
+          description: typeof data.description === 'string' ? data.description : '',
+          filePath: fullPath,
         });
+      } catch (err) {
+        console.error(`Error parsing ${fullPath}:`, err);
       }
     }
   }
 
-  scan(rootDirectory);
-  return skills;
+  return results;
 }
 
 async function main() {
@@ -60,7 +77,7 @@ async function main() {
   });
 
   const messages = [
-    { role: "system", content: findSkills(".claude/skills").map((skill) => `Name: ${skill.name}\nDescription: ${skill.description}\n\n`).join("") },
+    { role: "system", content: scanSkills(".claude/skills").map(skill => `Name: ${skill.name}\nDescription: ${skill.description}\n\n`).join("") },
     { role: "user", content: prompt }
   ];
   let exit = false;
