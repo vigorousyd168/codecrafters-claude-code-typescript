@@ -14,14 +14,26 @@ function buildSystemPrompt(skills: SkillMetadata[]): string {
 
 function buildUserPrompt(prompt: string, skills: SkillMetadata[]): string {
   if (prompt.startsWith("/")) {
-    const skillName = prompt.slice(1);
+    const skillName = prompt.split(" ")[0].slice(1);
     const skill = skills.find(s => s.name === skillName);
     if (!skill) {
       throw new Error(`Skill not found: ${skillName}`);
     }
-    return skill.body;
+    return formatString(skill.body, ...prompt.split(" ").slice(1));
   }
   return prompt;
+}
+
+function formatString(template: string, ...args: string[]): string {
+  return template.replace(/\$(\d+)/g, (match, indexStr) => {
+    const index = parseInt(indexStr, 10) - 1; // Convert $1 to 0-based index
+    return index >= 0 && index < args.length ? args[index] : match;
+  }).replace(/\$ARGUMENTS\[(\d+)\]/g, (match, indexStr) => {
+    const index = parseInt(indexStr, 10) - 1; // Convert $1 to 0-based index
+    return index >= 0 && index < args.length ? args[index] : match;
+  }).replace(/\$ARGUMENTS/g, () => {
+    return args.join(" ");
+  });
 }
 
 async function main() {
