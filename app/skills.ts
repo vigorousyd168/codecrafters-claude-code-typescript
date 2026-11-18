@@ -6,6 +6,7 @@ export interface SkillMetadata {
   description: string;
   filePath: string;
   body: string;
+  context?: 'fork';
 }
 
 /**
@@ -104,6 +105,7 @@ export function scanSkills(dirPath: string): SkillMetadata[] {
           description: metadata.description || '',
           filePath: fullPath,
           body,
+          context: metadata.context === 'fork' ? 'fork' : undefined,
         });
       } catch (error) {
         console.error(`Failed to read or parse ${fullPath}:`, error);

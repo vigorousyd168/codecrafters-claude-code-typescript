@@ -4,7 +4,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
 import { scanSkills } from './skills';
-import { splitTokens, formatString } from './utils';
+import { splitTokens, expandSkill } from './utils';
+import { runAgentLoop } from './agent';
 
 const execAsync = promisify(exec);
 
@@ -116,7 +117,12 @@ export async function executeTool(name: string, rawArguments: string): Promise<s
       const skill = skills.find(s => s.name === skillName);
       if (skill) {
         const args = functionArguments.args ? splitTokens(functionArguments.args) : [];
-        return formatString(skill.body, ...args);
+        if (skill.context === 'fork') {
+          // Fresh conversation: the forked run sees only the skill, not the caller's history
+          const result = await runAgentLoop([{ role: "user", content: expandSkill(skill, args) }]);
+          return `Skill ${skillName} ran in a separate context and returned: ${result}`;
+        }
+        return expandSkill(skill, args);
       } else {
         return `Skill not found: ${skillName}`;
       }
