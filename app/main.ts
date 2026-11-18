@@ -30,7 +30,9 @@ function buildUserPrompts(prompt: string, skills: SkillMetadata[]): string[] {
     return [prompt];
   }
   const args = tokens.slice(invoked.length);
-  return invoked.map(skill => formatString(skill.body, ...args));
+  return invoked.map(skill => `Skill: ${skill.name} (path: ${skill.filePath})\n
+    Paths in the instructions below are relative to the skill's folder.\n\n
+    ${formatString(skill.body, ...args)}`);
 }
 
 /**
