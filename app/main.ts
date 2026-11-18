@@ -12,16 +12,25 @@ function buildSystemPrompt(skills: SkillMetadata[]): string {
   return "You have access to the following skills:\n\n" + skillList;
 }
 
-function buildUserPrompt(prompt: string, skills: SkillMetadata[]): string {
-  if (prompt.startsWith("/")) {
-    const [command, ...args] = splitArgs(prompt);
-    const skill = skills.find(s => s.name === command.slice(1));
-    // No matching skill (e.g. "/etc/hosts ..."): fall through and send the prompt as-is
-    if (skill) {
-      return formatString(skill.body, ...args);
-    }
+/**
+ * Leading "/name" tokens that match a skill are consumed as skill invocations;
+ * the first token that isn't a matching skill starts the arguments, which are
+ * passed to every invoked skill. Returns one expanded body per invoked skill.
+ */
+function buildUserPrompts(prompt: string, skills: SkillMetadata[]): string[] {
+  const tokens = splitArgs(prompt);
+  const invoked: SkillMetadata[] = [];
+  for (const token of tokens) {
+    const skill = token.startsWith("/") ? skills.find(s => s.name === token.slice(1)) : undefined;
+    if (!skill) break;
+    invoked.push(skill);
   }
-  return prompt;
+  // No matching skill (e.g. "/etc/hosts ..."): send the prompt as-is
+  if (invoked.length === 0) {
+    return [prompt];
+  }
+  const args = tokens.slice(invoked.length);
+  return invoked.map(skill => formatString(skill.body, ...args));
 }
 
 /**
@@ -69,7 +78,7 @@ async function main() {
 
   const messages = [
     { role: "system", content: buildSystemPrompt(skills) },
-    { role: "user", content: buildUserPrompt(prompt, skills) }
+    ...buildUserPrompts(prompt, skills).map(content => ({ role: "user", content }))
   ];
 
   while (true) {
