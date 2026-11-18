@@ -18,7 +18,7 @@ function buildSystemPrompt(skills: SkillMetadata[]): string {
  * passed to every invoked skill. Returns one expanded body per invoked skill.
  */
 function buildUserPrompts(prompt: string, skills: SkillMetadata[]): string[] {
-  const tokens = splitArgs(prompt);
+  const tokens = splitTokens(prompt);
   const invoked: SkillMetadata[] = [];
   for (const token of tokens) {
     const skill = token.startsWith("/") ? skills.find(s => s.name === token.slice(1)) : undefined;
@@ -36,7 +36,7 @@ function buildUserPrompts(prompt: string, skills: SkillMetadata[]): string[] {
 /**
  * Splits on whitespace, keeping "double" or 'single' quoted text together as one argument (quotes removed).
  */
-function splitArgs(input: string): string[] {
+function splitTokens(input: string): string[] {
   return [...input.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)]
     .map(m => m[1] ?? m[2] ?? m[3]);
 }
