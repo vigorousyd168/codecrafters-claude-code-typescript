@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { scanSkills, type SkillMetadata } from "./skills";
 import { toolDefinitions, executeTool } from "./tools";
+import { splitTokens, formatString } from "./utils";
 
 function buildSystemPrompt(skills: SkillMetadata[]): string {
   if (skills.length === 0) {
@@ -9,7 +10,8 @@ function buildSystemPrompt(skills: SkillMetadata[]): string {
   const skillList = skills
     .map(skill => `- ${skill.name}: ${skill.description}\n`)
     .join("");
-  return "You have access to the following skills:\n\n" + skillList;
+  return "You have access to the following skills:\n\n" + skillList + 
+  `\n\nIf a skill matches the user's request, call the Skill tool with its name and follow the instructions it returns.`;
 }
 
 /**
@@ -33,29 +35,6 @@ function buildUserPrompts(prompt: string, skills: SkillMetadata[]): string[] {
   return invoked.map(skill => `Skill: ${skill.name} (path: ${skill.filePath})\n
     Paths in the instructions below are relative to the skill's folder.\n\n
     ${formatString(skill.body, ...args)}`);
-}
-
-/**
- * Splits on whitespace, keeping "double" or 'single' quoted text together as one argument (quotes removed).
- */
-function splitTokens(input: string): string[] {
-  return [...input.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)]
-    .map(m => m[1] ?? m[2] ?? m[3]);
-}
-
-/**
- * Substitutes $ARGUMENTS[N], $N (0-based) and $ARGUMENTS in a single pass,
- * so placeholders inside substituted arguments are left untouched.
- * Out-of-range indexes are left as-is.
- */
-function formatString(template: string, ...args: string[]): string {
-  return template.replace(/\$ARGUMENTS\[(\d+)\]|\$(\d+)|\$ARGUMENTS/g, (match, bracketIndex, shortIndex) => {
-    const index = bracketIndex ?? shortIndex;
-    if (index === undefined) {
-      return args.join(" ");
-    }
-    return args[Number(index)] ?? match;
-  });
 }
 
 async function main() {

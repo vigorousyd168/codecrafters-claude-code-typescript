@@ -3,6 +3,8 @@ import { promisify } from 'util';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
+import { scanSkills } from './skills';
+import { splitTokens, formatString } from './utils';
 
 const execAsync = promisify(exec);
 
@@ -62,6 +64,21 @@ export const toolDefinitions: ChatCompletionTool[] = [
         }
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "Skill",
+      "description": "Load a skill's instructions into the conversation",
+      "parameters": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "The name of the skill to use" },
+          "args": { "type": "string", "description": "Optional arguments for the skill" }
+        }
+      }
+    }
   }
 ];
 
@@ -90,6 +107,19 @@ export async function executeTool(name: string, rawArguments: string): Promise<s
       // const { stdout, stderr } = await $`${command}`.quiet().nothrow(); // support of bun's $ function in my env appeared to be limited
       const { stdout, stderr } = await execAsync(command);
       return `Command executed: ${command}\nOutput:\n${stdout}\nError Output:\n${stderr}`;
+    }
+    else if (name === "Skill") {
+      const functionArguments = JSON.parse(rawArguments);
+      const skillName = functionArguments.name;
+      // tool result is the skill's body with $ARGUMENTS substituted, or an error message if the skill is not found
+      const skills = scanSkills(".claude/skills");
+      const skill = skills.find(s => s.name === skillName);
+      if (skill) {
+        const args = functionArguments.args ? splitTokens(functionArguments.args) : [];
+        return formatString(skill.body, ...args);
+      } else {
+        return `Skill not found: ${skillName}`;
+      }
     }
     else {
       return `Unknown tool call: ${name}`;
